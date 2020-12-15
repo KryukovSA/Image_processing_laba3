@@ -4,7 +4,6 @@ import numpy as np
 
 from image_processing_lib.cli_image_argument import get_image_path
 from image_processing_lib.windows_manager import create_two_windows
-from image_processing_lib.time_comparing import get_time
 from part_1_lib.algCanny import canny
 
 if __name__ == "__main__":

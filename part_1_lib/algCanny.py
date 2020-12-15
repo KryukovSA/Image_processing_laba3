@@ -1,5 +1,4 @@
 import numpy as np
-import cv2
 from scipy import ndimage
 from scipy.ndimage.filters import convolve
 
