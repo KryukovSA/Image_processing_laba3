@@ -15,7 +15,11 @@ if __name__ == "__main__":
         )
     )
 
-img = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
+img = cv2.imread(image_path, 1)
+
 result_img = canny(img)
+edges = cv2.Canny(img, 50, 150, apertureSize=3)
+
+cv2.imshow('canny opencv', np.uint8(edges))
 create_two_windows(np.uint8(result_img), np.uint8(img), 'canny', 'source image')
 cv2.waitKey()

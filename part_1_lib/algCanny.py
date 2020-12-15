@@ -5,6 +5,7 @@ from scipy.ndimage.filters import convolve
 
 
 def canny(img):
+    img = rgb2gray(img)
     img_smoothed = convolve(img, gaussian_kernel(5, 1))
     gradient_mat, theta_mat = sobel_filters(img_smoothed)
     non_max_img = non_max_suppression(gradient_mat, theta_mat)
@@ -105,3 +106,9 @@ def hysteresis(img, weak_pixel, strong_pixel):
                     img[i, j] = 0
 
     return img
+
+
+def rgb2gray(rgb):
+    r, g, b = rgb[:, :, 0], rgb[:, :, 1], rgb[:, :, 2]
+    gray = 0.2989 * r + 0.5870 * g + 0.1140 * b
+    return gray
