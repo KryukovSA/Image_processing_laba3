@@ -3,111 +3,102 @@ from scipy import ndimage
 from scipy.ndimage.filters import convolve
 
 
-def canny(img):
-    img = rgb2gray(img)
-    img_smoothed = convolve(img, gaussian_kernel(5, 1))
-    gradient_mat, theta_mat = sobel_filters(img_smoothed)
-    non_max_img = non_max_suppression(gradient_mat, theta_mat)
-    threshold_img = threshold(non_max_img, weak_pixel=75, strong_pixel=255, low_threshold=0.05, high_threshold=0.15)
-    img_final = hysteresis(threshold_img, weak_pixel=75, strong_pixel=255)
-    return img_final
+def operator_sobel(img):
+    grad_x = np.array([[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]], np.float32)
+    grad_y = np.array([[-1, -2, -1], [0, 0, 0], [1, 2, 1]], np.float32)
+    gorizonial = ndimage.filters.convolve(img, grad_x)
+    vertical = ndimage.filters.convolve(img, grad_y)
+    g_res = np.hypot(gorizonial, vertical)
+    g_res = g_res / g_res.max() * 255
+    theta = np.arctan2(vertical, gorizonial)
+    return g_res, theta
 
 
-def gaussian_kernel(size, sigma=1):
-    size = int(size) // 2
-    x, y = np.mgrid[-size:size + 1, -size:size + 1]
-    normal = 1 / (2.0 * np.pi * sigma ** 2)
-    g = np.exp(-((x ** 2 + y ** 2) / (2.0 * sigma ** 2))) * normal
+def leave_pacification(image, teta):
+    a, b = image.shape
+    value = np.zeros((a, b), dtype=np.int32)
+    corner = teta * 180. / 3.1415
+    corner[corner < 0] += 180
+
+    for i in range(1, a - 1):
+        for j in range(1, b - 1):
+            qt = 255
+            rt = 255
+
+            if (0 <= corner[i, j] < 22.5) or (157.5 <= corner[i, j] <= 180):
+                qt = image[i, j + 1]
+                rt = image[i, j - 1]
+
+            elif 22.5 <= corner[i, j] < 67.5:
+                qt = image[i + 1, j - 1]
+                rt = image[i - 1, j + 1]
+
+            elif 67.5 <= corner[i, j] < 112.5:
+                qt = image[i + 1, j]
+                rt = image[i - 1, j]
+
+            elif 112.5 <= corner[i, j] < 157.5:
+                qt = image[i - 1, j - 1]
+                rt = image[i + 1, j + 1]
+
+            if (image[i, j] >= qt) and (image[i, j] >= rt):
+                value[i, j] = image[i, j]
+            else:
+                value[i, j] = 0
+
+    return value
+
+
+def gauss(sz, sgm=1):
+    sz = int(sz) // 2
+    x, y = np.mgrid[-sz:sz + 1, -sz:sz + 1]
+    ideal = 1 / (2.0 * 3.1415 * sgm ** 2)
+    g = np.exp(-((x ** 2 + y ** 2) / (2.0 * sgm ** 2))) * ideal
     return g
 
 
-def sobel_filters(img):
-    kx = np.array([[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]], np.float32)
-    ky = np.array([[1, 2, 1], [0, 0, 0], [-1, -2, -1]], np.float32)
-
-    ix = ndimage.filters.convolve(img, kx)
-    iy = ndimage.filters.convolve(img, ky)
-
-    g = np.hypot(ix, iy)
-    g = g / g.max() * 255
-    theta = np.arctan2(iy, ix)
-    return g, theta
-
-
-def non_max_suppression(img, d):
-    m, n = img.shape
-    z = np.zeros((m, n), dtype=np.int32)
-    angle = d * 180. / np.pi
-    angle[angle < 0] += 180
-
-    for i in range(1, m - 1):
-        for j in range(1, n - 1):
-            q = 255
-            r = 255
-
-            # angle 0
-            if (0 <= angle[i, j] < 22.5) or (157.5 <= angle[i, j] <= 180):
-                q = img[i, j + 1]
-                r = img[i, j - 1]
-            # angle 45
-            elif 22.5 <= angle[i, j] < 67.5:
-                q = img[i + 1, j - 1]
-                r = img[i - 1, j + 1]
-            # angle 90
-            elif 67.5 <= angle[i, j] < 112.5:
-                q = img[i + 1, j]
-                r = img[i - 1, j]
-            # angle 135
-            elif 112.5 <= angle[i, j] < 157.5:
-                q = img[i - 1, j - 1]
-                r = img[i + 1, j + 1]
-
-            if (img[i, j] >= q) and (img[i, j] >= r):
-                z[i, j] = img[i, j]
-            else:
-                z[i, j] = 0
-
-    return z
+def thresholds(image, low_pix, heavy_pix, threshold1, threshold2):
+    threshold2 = image.max() * threshold2
+    threshold1 = threshold2 * threshold1
+    a, b = image.shape
+    result = np.zeros((a, b), dtype=np.int32)
+    low = np.int32(low_pix)
+    heavy = np.int32(heavy_pix)
+    low_i, heavy_j = np.where(image >= threshold2)
+    weak_i, weak_j = np.where((image <= threshold2) & (image >= threshold1))
+    result[low_i, heavy_j] = heavy
+    result[weak_i, weak_j] = low
+    return result
 
 
-def threshold(img, weak_pixel, strong_pixel, low_threshold, high_threshold):
-    high_threshold = img.max() * high_threshold
-    low_threshold = high_threshold * low_threshold
-
-    m, n = img.shape
-    res = np.zeros((m, n), dtype=np.int32)
-    weak = np.int32(weak_pixel)
-    strong = np.int32(strong_pixel)
-
-    strong_i, strong_j = np.where(img >= high_threshold)
-    weak_i, weak_j = np.where((img <= high_threshold) & (img >= low_threshold))
-
-    res[strong_i, strong_j] = strong
-    res[weak_i, weak_j] = weak
-
-    return res
-
-
-def hysteresis(img, weak_pixel, strong_pixel):
-    m, n = img.shape
-    weak = weak_pixel
-    strong = strong_pixel
-
-    for i in range(1, m - 1):
-        for j in range(1, n - 1):
-            if img[i, j] == weak:
-                if ((img[i + 1, j - 1] == strong) or (img[i + 1, j] == strong) or (img[i + 1, j + 1] == strong)
-                        or (img[i, j - 1] == strong) or (img[i, j + 1] == strong)
-                        or (img[i - 1, j - 1] == strong) or (img[i - 1, j] == strong) or (
-                                img[i - 1, j + 1] == strong)):
-                    img[i, j] = strong
+def dependence(image, low_pix, heavy_pix):
+    a, b = image.shape
+    low = low_pix
+    heavy = heavy_pix
+    for i in range(1, a - 1):
+        for j in range(1, b - 1):
+            if image[i, j] == low:
+                if ((image[i + 1, j - 1] == heavy) or (image[i + 1, j] == heavy) or (image[i + 1, j + 1] == heavy)
+                        or (image[i, j - 1] == heavy) or (image[i, j + 1] == heavy)
+                        or (image[i - 1, j - 1] == heavy) or (image[i - 1, j] == heavy) or (
+                                image[i - 1, j + 1] == heavy)):
+                    image[i, j] = heavy
                 else:
-                    img[i, j] = 0
+                    image[i, j] = 0
+    return image
 
-    return img
+
+def shades_gray(rgb):
+    red, green, blue = rgb[:, :, 0], rgb[:, :, 1], rgb[:, :, 2]
+    gray_col = 0.2989 * red + 0.5870 * green + 0.1140 * blue
+    return gray_col
 
 
-def rgb2gray(rgb):
-    r, g, b = rgb[:, :, 0], rgb[:, :, 1], rgb[:, :, 2]
-    gray = 0.2989 * r + 0.5870 * g + 0.1140 * b
-    return gray
+def algorithm_canny(image):
+    image = shades_gray(image)
+    image_flatten = convolve(image, gauss(5, 1))
+    rug_grad, rug_teta = operator_sobel(image_flatten)
+    pacification_img = leave_pacification(rug_grad, rug_teta)
+    image_limit = thresholds(pacification_img, low_pix=75, heavy_pix=255, threshold1=0.05, threshold2=0.15)
+    result_image = dependence(image_limit, low_pix=75, heavy_pix=255)
+    return result_image
