@@ -70,8 +70,8 @@ def _scan_for_circle(
     return circles_result
 
 
-def draw_circles(circles: list, image: np.ndarray):
+def draw_circles(circles: list, image: np.ndarray, thickness: int = 1):
     image_with_circles = np.copy(image)
     for vertex in circles:
-        cv2.circle(image_with_circles, (vertex[0], vertex[1]), vertex[2], (0, 0, 0), 1)
+        cv2.circle(image_with_circles, (vertex[0], vertex[1]), vertex[2], (0, 0, 0), thickness)
     return image_with_circles
