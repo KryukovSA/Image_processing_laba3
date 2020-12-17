@@ -42,8 +42,7 @@ if __name__ == "__main__":
         'opencv_detected_circles',
         'my_detected_circles',
     )
-    
+
     compare_results = compare_circles(img.shape,
                                       ref_circles=circles_opencv[0],
                                       actual_circles=circles_custom)
-

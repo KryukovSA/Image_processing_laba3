@@ -14,34 +14,55 @@ def compare_circles(
     actual_img = draw_circles(actual_circles, ref_img, thickness=-1)
     ref_img = draw_circles(ref_circles, ref_img, thickness=-1)
 
-    intersect = cv2.threshold(
+    intersect_img = cv2.threshold(
                     actual_img + ref_img,
                     0,
                     255,
                     cv2.THRESH_BINARY)[1]
-    union = cv2.threshold(
+    union_img = cv2.threshold(
                     actual_img * ref_img,
                     0,
                     255,
                     cv2.THRESH_BINARY)[1]
 
+    iou = (np.count_nonzero(intersect_img == 0) /
+           np.count_nonzero(union_img == 0))
+    print("Intersection over union: ", iou)
+
     create_two_windows(
-        intersect,
-        union,
+        intersect_img,
+        union_img,
         'intersect',
         'union',
     )
 
-    iou = (np.count_nonzero(intersect == 0) /
-           np.count_nonzero(union == 0))
-    print("Intersection over union: ", iou)
-    
+    ref_img = cv2.threshold(
+                    ref_img,
+                    0,
+                    255,
+                    cv2.THRESH_BINARY)[1]
+    actual_img = cv2.threshold(
+                    actual_img,
+                    0,
+                    255,
+                    cv2.THRESH_BINARY)[1]
+
+    fp_img = np.full(shape, 255, dtype=np.uint8) - (intersect_img - actual_img)
+    fn_img = np.full(shape, 255, dtype=np.uint8) - (intersect_img - ref_img)
+
     fp = (np.count_nonzero((actual_img == 0) & (actual_img != ref_img)) /
-           np.count_nonzero(union == 0))
+          np.count_nonzero(union_img == 0))
     print("False positive: ", fp)
-    
+
     fn = (np.count_nonzero((ref_img == 0) & (actual_img != ref_img)) /
-           np.count_nonzero(union == 0))
+          np.count_nonzero(union_img == 0))
     print("False negative: ", fn)
-    
+
+    create_two_windows(
+        fp_img,
+        fn_img,
+        'false positive',
+        'false negative',
+    )
+
     return iou, fp, fn
