@@ -65,13 +65,13 @@ def _scan_for_circle(
             ):
                 mean_sum = np.mean(cells_accumulator[i - 1:i + 1, j - 1:j + 1])
                 if mean_sum >= param2:
-                    circles_result.append((i, j, r))
+                    circles_result.append((j, i, r))
                     cells_accumulator[i:(i + 5), j:(j + 7)] = 0
     return circles_result
 
 
-def draw_circles(circles: list, image: np.ndarray):
+def draw_circles(circles: list, image: np.ndarray, thickness: int = 1):
     image_with_circles = np.copy(image)
     for vertex in circles:
-        cv2.circle(image_with_circles, (vertex[1], vertex[0]), vertex[2], (0, 0, 0), 1)
+        cv2.circle(image_with_circles, (vertex[0], vertex[1]), vertex[2], (0, 0, 0), thickness)
     return image_with_circles
