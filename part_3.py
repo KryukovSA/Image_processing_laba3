@@ -20,7 +20,7 @@ if __name__ == "__main__":
     blured_img = cv2.GaussianBlur(img, (5, 5), 0)
     edges = cv2.Canny(blured_img, 50, 150, apertureSize=3)
 
-    circles_custom = get_time(serch_circles, edges, 10, 120, 120, 40)
+    circles_custom = get_time(serch_circles, edges, 30, 120, 120, 40)
     circles_opencv = get_time(
         cv2.HoughCircles,
         edges,
