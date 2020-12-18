@@ -5,7 +5,7 @@ from image_processing_lib.cli_image_argument import get_image_path
 from image_processing_lib.windows_manager import create_two_windows
 from image_processing_lib.time_comparing import get_time
 from part_2_lib.circle_search import serch_circles, draw_circles
-from part_3_lib.statistic import compare_circles
+from part_3_lib.statistic import compare_circles, count_circles
 
 
 if __name__ == "__main__":
@@ -46,3 +46,6 @@ if __name__ == "__main__":
     compare_results = compare_circles(img.shape,
                                       ref_circles=circles_opencv[0],
                                       actual_circles=circles_custom)
+
+    print("Count opencv circles: ", count_circles(circles_opencv[0]))
+    print("Count custom circles: ", count_circles(circles_custom))
